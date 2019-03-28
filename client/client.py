@@ -131,15 +131,15 @@ class FederatedClient(object):
         """
         Handlers used for SocketIO messaging
         """
-        @sio_client.on('connect')
+        @self.sio_client.on('connect')
         def on_connect():
             logger.info("Client Connected!")
         
-        @sio_client.on('disconnect')
+        @self.sio_client.on('disconnect')
         def on_disconnect():
             logger.info("Client Disconnected!")
         
-        @sio_client.on('reconnect')
+        @self.sio_client.on('reconnect')
         def on_reconnect():
             logger.info("Client Reconnected!")
         
@@ -168,5 +168,44 @@ class FederatedClient(object):
                 response['valid_accuracy'] = valid_accuracy
         
             self.sio_client.emit('client_update', response)
+        
+        def on_stop_and_eval(*args):
+            req = args[0]
+            if req['weights_format'] == 'pickle':
+                weights = utility.pickle_string_to_obj(req['current_weights'])
+            self.local_model.set_weights(weights)
+            test_loss, test_accuracy = self.local_model.evaluate()
+
+            response = {
+                'test_size': self.local_model.x_test.shape[0],
+                'test_loss': test_loss,
+                'test_accuracy': test_accuracy
+            }
+
+            self.sio_client.emit('client_evaluation', response)
+        
+        self.sio_client.on('connect', on_connect)
+        self.sio_cleint.on('disconnect', on_disconnect)
+        self.sio_client.on('reconnect', on_reconnect)
+        self.sio_client.on('init', lambda *args: self.on_init(*args))
+        self.sio_client.on('request_update', on_request_update)
+        self.sio_client.on('stop_and_eval', on_stop_and_eval)
+
+
+    def intermittent_sleep(self, p=.1, low=10, high=100):
+        """Intermittently sleep the client with some probability < p for sime random time between 1 and 100 seconds
+        
+        Keyword Arguments:
+            p {float} -- [probability of sleep firing] (default: {.1})
+            low {int} -- [lower bound on sleep time] (default: {10})
+            high {int} -- [upper bound on sleep time] (default: {100})
+        """
+        if (random.random() < p):
+            time.sleep(random.randint(low, high))
+
+
+if __name__ == '__main__':
+    FederatedClient("127.0.0.1", 5000, datasource.Mnist)
+
 
 

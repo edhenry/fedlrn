@@ -13,7 +13,7 @@ def pickle_string_to_obj(string: str):
     """
     return pickle.loads(codecs.decode(string.encode(), "base64"))
 
-def obj_to_pickle_string(obj: object):
+def obj_to_pickle_string(x):
     """Pickle object to string
     
     Arguments:
