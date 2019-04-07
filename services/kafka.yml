@@ -1,0 +1,32 @@
+---
+
+version: '2'
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+    networks: 
+      - data-stack-net
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+      - "9092"
+    networks: 
+      - data-stack-net
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: 172.23.0.1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_MESSAGE_MAX_BYTES: 10000000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    
+networks: 
+    data-stack-net:
+      ipam:
+          driver: default
+          config:
+          -
+            subnet: 172.23.0.0/24
+            gateway: 172.23.0.1

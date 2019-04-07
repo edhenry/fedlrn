@@ -1,0 +1,12 @@
+---
+
+- name: Stop & Destroy Data Cluster
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks: 
+    # Kafka role build and destroys networking infrasutructure
+    # Ensure it is always at the bottom of the list because of
+    # Ansible's order of execution and docker's networking
+    # depedendency
+    - include: roles/kafka/tasks/destroy.yml

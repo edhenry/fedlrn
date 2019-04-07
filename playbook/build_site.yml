@@ -1,0 +1,9 @@
+---
+
+- name: Build Site 
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - include: roles/kafka/tasks/build.yml
+    
