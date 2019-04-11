@@ -52,13 +52,14 @@ class GlobalModel(object):
     def build_model(self):
         raise NotImplementedError()
     
-    def update_weights(self, client_weights, client_size):
+    def update_weights(self, client_weights, client_size, request_sid):
         new_weights = [np.zeros(w.shape) for w in self.current_weights]
         total_size = np.sum(client_size)
-
         for c in range(len(client_weights)):
             for i in range(len(new_weights)):
-                new_weights[i] += client_weights[c][i] * client_size[c] / total_size
+                client_weight_test = client_weights[c][i]
+                client_size_test = client_size[c]
+                new_weights[i] += np.true_divide((client_weights[c][i] * client_size[c]), total_size)
         
         self.current_weights = new_weights
 
@@ -85,7 +86,7 @@ class GlobalModel(object):
         self.train_losses += [[current_round, current_time, aggregate_loss]]
         self.training_accuracies += [[current_round, current_round, aggregate_accuracies]]
         with open('stat.txt', 'w') as outfile:
-            json.dumps(self.get_stats(), outfile)
+            json.dump(self.get_stats(), outfile)
         
         return aggregate_loss, aggregate_accuracies
 
@@ -103,7 +104,7 @@ class GlobalModel(object):
         self.validation_losses += [[current_round, current_time, aggregate_loss]]
         self.validation_accuracies += [[current_round, current_time, aggregate_accuracies]]
         with open('stats.txt', 'w') as outfile:
-            json.dumps(self.get_stats(), outfile)
+            json.dump(self.get_stats(), outfile)
         
         return aggregate_loss, aggregate_accuracies        
     
@@ -133,7 +134,7 @@ class GlobalModel_MNIST_CNN(GlobalModel):
         model.add(tf.keras.layers.Flatten())
         model.add(tf.keras.layers.Dense(128, activation='relu'))
         model.add(tf.keras.layers.Dropout(0.5))
-        model.add(tf.keras.layers.Dense(10, activation='relu'))
+        model.add(tf.keras.layers.Dense(10, activation='softmax'))
         
         model.compile(loss=tf.keras.losses.categorical_crossentropy,
                       optimizer=tf.keras.optimizers.Adadelta(),
@@ -145,14 +146,14 @@ class FedLearnServer(object):
 
     # Federated Learning Options
     # TODO break this out into a configuration file
-    MIN_NUMBER_WORKERS = 1
+    MIN_NUMBER_WORKERS = 3
     MAX_NUMBER_ROUNDS = 50
     
     # This should be tunable according to the total number of clients
     # some ratio of T (arrays of measurements on a client) and G (groups of clients)
     # this ratio will likely guide the overall global convergence rates and define
     # the profile of the workload from a hardware perspective
-    NUM_CLIENTS_CONTACTED_PER_ROUND = 1
+    NUM_CLIENTS_CONTACTED_PER_ROUND = 3
     ROUNDS_BETWEEN_VALIDATION = 2
 
     def __init__(self, global_model, host, port):
@@ -222,9 +223,9 @@ class FedLearnServer(object):
         def handle_client_update(data):
             logger.info(f"Received Client Update of {sys.getsizeof(data)} bytes")
             logger.info(f"Handle Client Update for Client {request.sid}")
-            for x in data:
-                if x != 'weights':
-                    logger.info(f"{x}, {data[x]}")
+            # for x in data:
+            #     if x != 'weights':
+            #         #logger.info(f"{x}, {data[x]}")
             
             if data['round_number'] == self.current_round:
                 self.current_round_client_updates += [data]
@@ -234,6 +235,7 @@ class FedLearnServer(object):
                     self.global_model.update_weights(
                         [x['weights'] for x in self.current_round_client_updates],
                         [x['train_size'] for x in self.current_round_client_updates],
+                        request.sid,
                     )
                     aggregate_train_loss, aggregate_train_accuracy = self.global_model.aggregate_train_loss_accuracy(
                         [x['train_loss'] for x in self.current_round_client_updates],

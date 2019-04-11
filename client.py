@@ -132,7 +132,7 @@ class LocalModel(object):
         """
         with self.model_json_graph.as_default():
             with self.session1.as_default():
-                score = self.model.evaluate(self.x_test, self.y_test, verboser=0)
+                score = self.model.evaluate(self.x_test, self.y_test, verbose=0)
                 logger.info("Test Loss : {}".format(score[0]))
                 logger.info("Test Accuracy : {}".format(score[1]))
         
@@ -203,20 +203,22 @@ class FederatedClient(object):
             
             self.local_model.set_weights(weights)
             my_weights, train_loss, train_accuracy = self.local_model.train_single_round()
+
+            logger.info(f"Client Weights : {my_weights}")
             
             response = {
-                'round_number': req['round_number'],
+                'round_number': float(req['round_number']),
                 'weights': utility.obj_to_pickle_string(my_weights),
                 'train_size': self.local_model.x_train.shape[0],
                 'valid_size': self.local_model.x_valid.shape[0],
-                'train_loss': str(train_loss),
-                'train_accuracy': str(train_accuracy)
+                'train_loss': float(train_loss),
+                'train_accuracy': float(train_accuracy)
             }
 
             if req['run_validation']:
                 valid_loss, valid_accuracy = self.local_model.validate()
-                response['valid_loss'] = valid_loss
-                response['valid_accuracy'] = valid_accuracy
+                response['valid_loss'] = float(valid_loss)
+                response['valid_accuracy'] = float(valid_accuracy)
         
             self.sio_client.emit('client_update', response)
         
@@ -229,8 +231,8 @@ class FederatedClient(object):
 
             response = {
                 'test_size': self.local_model.x_test.shape[0],
-                'test_loss': test_loss,
-                'test_accuracy': test_accuracy
+                'test_loss': float(test_loss),
+                'test_accuracy': float(test_accuracy)
             }
 
             self.sio_client.emit('client_evaluation', response)

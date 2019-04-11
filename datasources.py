@@ -65,15 +65,6 @@ class Mnist(DataSource):
         weights /= np.sum(weights)
         return weights.tolist()
 
-
-    def gen_sample_weights(self, labels, label_w):
-        size_per_class = np.array([np.sum(labels == i) for i in Mnist.CLASSES])
-        label_w = np.divide(label_w, size_per_class)
-        sample_w = np.zeros(labels.shape[0])
-        sample_w[labels] = label_w
-        sample_w /= np.sum(sample_w)
-        return sample_w
-
     def post_process(self, xi, yi):
         if tf.keras.backend.image_data_format() == 'channels_first':
              xi = xi.reshape(1, xi.shape[0], xi.shape[1])
@@ -91,9 +82,9 @@ class Mnist(DataSource):
         idxs = np.array([np.random.choice(np.arange(n_train), num, replace=False) for num in nums])
         return {
             # (size_partition * 28 * 28, size_partition * 1) * num_partitions
-            "train": [post_process(self.x[idx], self.y[idx]) for idx in idxs],
+            "train": [self.post_process(self.x[idx], self.y[idx]) for idx in idxs],
             # (n_test * 28 * 28, n_test * 1)
-            "test": post_process(self.x[np.arange(n_train, n_train + n_test)], self.y[np.arange(n_train, n_train + n_test)])
+            "test": self.post_process(self.x[np.arange(n_train, n_train + n_test)], self.y[np.arange(n_train, n_train + n_test)])
         }
     
     # Generate one sample from all available data, *with replacement*.
