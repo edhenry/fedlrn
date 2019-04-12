@@ -44,8 +44,8 @@ class LocalModel(object):
         self.model_json_graph = tf.Graph()
 
         with self.model_json_graph.as_default():
-            self.session1 = tf.Session()
-            with self.session1.as_default():
+            self.session_1 = tf.Session()
+            with self.session_1.as_default():
                 self.model = tf.keras.models.model_from_json(model_config['model_json'])
                 self.model.compile(loss=tf.keras.losses.categorical_crossentropy,
                                 optimizer=tf.keras.optimizers.Adadelta(),
@@ -82,12 +82,12 @@ class LocalModel(object):
         #     return False
         # else:
         with self.model_json_graph.as_default():
-            with self.session1.as_default():
+            with self.session_1.as_default():
                 self.model.set_weights(new_weights)
     
     def score(self):
          with self.model_json_graph.as_default():
-            with self.session1.as_default():
+            with self.session_1.as_default():
                 score = self.model.evaluate(self.x_train, self.y_train, verbose=0)
                 logger.info("Train Loss : {}".format(score[0]))
                 logger.info("Train Accuracy {}".format(score[1]))
@@ -98,7 +98,7 @@ class LocalModel(object):
         Execute one round of training
         """
         with self.model_json_graph.as_default():
-            with self.session1.as_default():
+            with self.session_1.as_default():
                 self.model.compile(loss=tf.keras.losses.categorical_crossentropy,
                                optimizer=tf.keras.optimizers.Adadelta(),
                                metrics=['accuracy'])
@@ -118,7 +118,7 @@ class LocalModel(object):
 
         """
         with self.model_json_graph.as_default():
-            with self.session1.as_default():
+            with self.session_1.as_default():
                 score = self.model.evaluate(self.x_valid, self.y_valid, verbose=0)
                 logger.info("Validation Loss : {}".format(score[0]))
                 logger.info("Validation Accuracy : {}".format(score[1]))
@@ -131,7 +131,7 @@ class LocalModel(object):
 
         """
         with self.model_json_graph.as_default():
-            with self.session1.as_default():
+            with self.session_1.as_default():
                 score = self.model.evaluate(self.x_test, self.y_test, verbose=0)
                 logger.info("Test Loss : {}".format(score[0]))
                 logger.info("Test Accuracy : {}".format(score[1]))
