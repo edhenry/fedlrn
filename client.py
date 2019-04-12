@@ -3,15 +3,15 @@ import json
 import logging
 import pickle
 import random
+import threading
 import time
 
 import numpy as np
 import socketio
-
 import tensorflow as tf
-import utility
+
 import datasources
-import threading
+import utility
 
 # Basic loggging config 
 logging.basicConfig(level=logging.INFO)
@@ -203,9 +203,7 @@ class FederatedClient(object):
             
             self.local_model.set_weights(weights)
             my_weights, train_loss, train_accuracy = self.local_model.train_single_round()
-
-            logger.info(f"Client Weights : {my_weights}")
-            
+                        
             response = {
                 'round_number': float(req['round_number']),
                 'weights': utility.obj_to_pickle_string(my_weights),

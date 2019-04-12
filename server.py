@@ -9,11 +9,11 @@ import uuid
 
 import msgpack
 import numpy as np
+import tensorflow as tf
 from flask import Flask, render_template, request
 from flask_socketio import *
 from flask_socketio import SocketIO
 
-import tensorflow as tf
 import utility
 
 logging.basicConfig(level=logging.INFO)
@@ -52,14 +52,14 @@ class GlobalModel(object):
     def build_model(self):
         raise NotImplementedError()
     
-    def update_weights(self, client_weights, client_size, request_sid):
+    def update_weights(self, client_weights, client_size):
         new_weights = [np.zeros(w.shape) for w in self.current_weights]
         total_size = np.sum(client_size)
         for c in range(len(client_weights)):
             for i in range(len(new_weights)):
-                client_weight_test = client_weights[c][i]
+                client_weights_test = client_weights[c][i]
                 client_size_test = client_size[c]
-                new_weights[i] += np.true_divide((client_weights[c][i] * client_size[c]), total_size)
+                new_weights[i] += np.true_divide((client_weights[c][i] * np.float32(client_size[c])), np.float32(total_size))
         
         self.current_weights = new_weights
 
@@ -235,7 +235,6 @@ class FedLearnServer(object):
                     self.global_model.update_weights(
                         [x['weights'] for x in self.current_round_client_updates],
                         [x['train_size'] for x in self.current_round_client_updates],
-                        request.sid,
                     )
                     aggregate_train_loss, aggregate_train_accuracy = self.global_model.aggregate_train_loss_accuracy(
                         [x['train_loss'] for x in self.current_round_client_updates],
