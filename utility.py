@@ -11,7 +11,8 @@ def pickle_string_to_obj(string: str):
     Returns:
         [pickle] -- base64 encoded pickled object
     """
-    return pickle.loads(codecs.decode(string.encode(), "base64"))
+    unmarshal = pickle.loads(codecs.decode(string.encode(), "base64"))
+    return unmarshal
 
 def obj_to_pickle_string(x):
     """Pickle object to string

@@ -55,12 +55,17 @@ class GlobalModel(object):
     def update_weights(self, client_weights, client_size):
         new_weights = [np.zeros(w.shape) for w in self.current_weights]
         total_size = np.sum(client_size)
-        for c in range(len(client_weights)):
-            for i in range(len(new_weights)):
-                client_weights_test = client_weights[c][i]
-                client_size_test = client_size[c]
-                new_weights[i] += np.true_divide((client_weights[c][i] * np.float32(client_size[c])), np.float32(total_size))
+        unmarshall_client_weights = []
         
+        for x in client_weights:
+            c_weights = utility.pickle_string_to_obj(x)
+            unmarshall_client_weights.append(c_weights)
+        for c in range(len(unmarshall_client_weights)):
+            for i in range(len(new_weights)):
+                #TODO type check to see if I can catch
+                # the fact that these arrays don't seem to 
+                # be unmarshalling where I need them to.
+                new_weights[i] += unmarshall_client_weights[c][i] * client_size[c] / total_size       
         self.current_weights = new_weights
 
     def aggregate_loss_accuracy(self, client_losses, client_accuracies, client_sizes):
@@ -229,13 +234,18 @@ class FedLearnServer(object):
             
             if data['round_number'] == self.current_round:
                 self.current_round_client_updates += [data]
-                self.current_round_client_updates[-1]['weights'] = utility.pickle_string_to_obj(data['weights'])
+                # last_weights = utility.pickle_string_to_obj(data['weights'])
 
+                #self.current_round_client_updates[-1]['weights'] = last_weights
+                logger.info(f"Length of current_round_client_updates : {len(self.current_round_client_updates)}")
+                
                 if len(self.current_round_client_updates) > FedLearnServer.NUM_CLIENTS_CONTACTED_PER_ROUND * .7:
+
                     self.global_model.update_weights(
                         [x['weights'] for x in self.current_round_client_updates],
                         [x['train_size'] for x in self.current_round_client_updates],
                     )
+
                     aggregate_train_loss, aggregate_train_accuracy = self.global_model.aggregate_train_loss_accuracy(
                         [x['train_loss'] for x in self.current_round_client_updates],
                         [x['train_accuracy'] for x in self.current_round_client_updates],
