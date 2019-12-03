@@ -1,4 +1,5 @@
 import codecs
+from configparser import ConfigParser
 import json
 import logging
 import pickle
@@ -28,6 +29,10 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+# Configuration
+config_file = './sample_server_config.ini'
+cp = ConfigParser()
+cp.read(config_file)
 
 class GlobalModel(object):
     """
@@ -151,15 +156,17 @@ class FedLearnServer(object):
 
     # Federated Learning Options
     # TODO break this out into a configuration file
-    MIN_NUMBER_WORKERS = 3
-    MAX_NUMBER_ROUNDS = 50
+    # MIN_NUMBER_WORKERS = 3
+    # MAX_NUMBER_ROUNDS = 50
+    MIN_NUMBER_WORKERS = cp["FEDSVR"].get("min_number_workers")
+    MAX_NUMBER_ROUNDS = cp["FEDSVR"].get("max_number_rounds")
     
     # This should be tunable according to the total number of clients
     # some ratio of T (arrays of measurements on a client) and G (groups of clients)
     # this ratio will likely guide the overall global convergence rates and define
     # the profile of the workload from a hardware perspective
-    NUM_CLIENTS_CONTACTED_PER_ROUND = 3
-    ROUNDS_BETWEEN_VALIDATION = 2
+    NUM_CLIENTS_CONTACTED_PER_ROUND = cp["FEDSVR"].get("num_clients_contacted_per_round")
+    ROUNDS_BETWEEN_VALIDATION = cp["FEDSVR"].get("rounds_between_validation")
 
     def __init__(self, global_model, host, port):
         self.global_model = global_model()
@@ -192,22 +199,22 @@ class FedLearnServer(object):
         
         @self.socketio.on('connect')
         def handle_connect():
-            logger.info(f"{request.sid} connected!")
+            logger.info(f"Client {request.sid} connected!")
         
         @self.socketio.on('reconnected')
         def handle_reconnect():
-            logger.info(f"{request.sid} reconnected!")
+            logger.info(f"Client {request.sid} reconnected!")
         
         @self.socketio.on('disconnect')
         def handle_disconnect():
-            logger.info(f"{request.sid} disconnected!")
+            logger.info(f"Client {request.sid} disconnected!")
             # prune client from set of clients
             if request.sid in self.ready_client_sids:
                 self.ready_client_sids.remove(request.sid)
         
         @self.socketio.on('client_wake_up')
         def handle_wake_up():
-            logger.info(f"client_wake_up : {request.sid}")
+            logger.info(f"Client {request.sid} has woken up!")
             emit('init', {
                 "model_json": self.global_model.model.to_json(),
                 "model_id": self.model_id,
@@ -330,7 +337,9 @@ class FedLearnServer(object):
 
 if __name__ == '__main__':
 
-    # TODO: Pass Server configuration parameters in via a configuration file
-    server = FedLearnServer(GlobalModel_MNIST_CNN, "127.0.0.1", 5000)
-    logger.info(f"Server Listening on Host IP : 127.0.0.1 and Port : 5000")
+    server_ip = cp["FEDSVR"].get("server_ip")
+    server_port = cp["FEDSVR"].get("server_port")
+
+    server = FedLearnServer(GlobalModel_MNIST_CNN, server_ip, server_port)
+    logger.info(f"Server Listening on Host IP : {server_ip} and Port : {server_port}")
     server.start()

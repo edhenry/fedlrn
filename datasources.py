@@ -111,7 +111,6 @@ class Mnist(DataSource):
         train_set = [self.sample_single_non_iid(self.x_train, self.y_train, my_class_distr) for _ in range(train_size)]
         test_set = [self.sample_single_non_iid(self.x_test, self.y_test, my_class_distr) for _ in range(test_size)]
         valid_set = [self.sample_single_non_iid(self.x_valid, self.y_valid, my_class_distr) for _ in range(valid_size)]
-        print("done generating fake data")
 
         return ((train_set, test_set, valid_set), my_class_distr)
 

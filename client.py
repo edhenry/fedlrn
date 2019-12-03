@@ -1,4 +1,5 @@
 import codecs
+from configparser import ConfigParser
 import json
 import logging
 import pickle
@@ -18,13 +19,17 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Logging file handler
-handler = logging.FileHandler('client.log')
+handler = logging.FileHandler(f'client.log')
 handler.setLevel(logging.INFO)
 
 # Logging format
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+
+config_file = ('./sample_client_config.ini')
+cp = ConfigParser()
+cp.read(config_file)
 
 class LocalModel(object):
     """Local model definition for local training on data sources
@@ -148,7 +153,8 @@ class FederatedClient(object):
     back to the server in either a push or pull fashion
 
     """
-    MAX_DATASET_SIZE_KEPT = 1200
+    MAX_DATASET_SIZE_KEPT = int(cp["FEDCLIENT"].get("max_dataset_size_kept"))
+
 
     def __init__(self, server_host, server_port, datasource):
         self.local_model = None
@@ -156,7 +162,7 @@ class FederatedClient(object):
 
         self.sio_client =  socketio.Client()
         # TODO : Make this configurable via a client configuration file
-        self.sio_client.connect('http://127.0.0.1:5000')
+        self.sio_client.connect(f'http://{server_host}:{server_port}')
 
         self.register_handlers()
         logger.info("Sent client wakeup")
@@ -165,6 +171,7 @@ class FederatedClient(object):
 
     def on_init(self, *args):
         model_config = args[0]
+
         logger.info(f"Preparing local data based on server model_config")
 
         fake_data, _ = self.datasource.fake_non_iid_data(
@@ -172,6 +179,9 @@ class FederatedClient(object):
             max_train = FederatedClient.MAX_DATASET_SIZE_KEPT,
             data_split = model_config['data_split']
         )
+
+        logger.info(f"Done generating fake MNIST data on client!")
+
         
         self.local_model = LocalModel(model_config, fake_data)
         self.sio_client.emit('client_ready', {
@@ -254,6 +264,8 @@ class FederatedClient(object):
         if (random.random() < p):
             time.sleep(random.randint(low, high))
 
-
 if __name__ == '__main__':
-    FederatedClient("127.0.0.1", 5000, datasources.Mnist)
+    server_host = cp["FEDCLIENT"].get("federated_server_host")
+    server_port = cp["FEDCLIENT"].get("federated_server_port")
+
+    FederatedClient(server_host, server_port, datasources.Mnist)
